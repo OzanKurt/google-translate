@@ -2,72 +2,70 @@
 
 namespace Kurt\Google;
 
-class Translate {
+class Translate
+{
+    private $googleServicesCore;
 
-	private $googleServicesCore;
+    private $defaultLanguage;
 
-	private $defaultLanguage;
+    private $service;
 
-	private $service;
+    public function __construct(Core $googleServicesCore)
+    {
+        $this->googleServicesCore = $googleServicesCore;
 
-	function __construct(Core $googleServicesCore) {
+        $this->setPropertiesFromConfigFile();
 
-		$this->googleServicesCore = $googleServicesCore;
+        $this->setupTranslateService();
+    }
 
-		$this->setPropertiesFromConfigFile();
+    public function setDefaultLanguage($languageShorty)
+    {
+        $this->defaultLanguage = $languageShorty;
+    }
 
-		$this->setupTranslateService();
+    private function setPropertiesFromConfigFile()
+    {
+        $this->defaultLanguage = config('google.translate.defaultLanguage', 'de');
+    }
 
-	}
+    private function setupTranslateService()
+    {
+        $this->service = new \Google_Service_Translate(
+            $this->googleServicesCore->getClient()
+        );
+    }
 
-	public function setDefaultLanguage($languageShorty)
-	{
-		$this->defaultLanguage = $languageShorty;
-	}
+    public function getTranslation($q, $target, $optParameters = [])
+    {
+        $translationObject = $this->service->translations->listTranslations($q, $target, $optParameters);
 
-	private function setPropertiesFromConfigFile()
-	{
-		$this->defaultLanguage = config('google.translate.defaultLanguage', 'de');
-	}
+        $simpleTranslationObject = $translationObject->toSimpleObject();
 
-	private function setupTranslateService()
-	{
-		$this->service = new \Google_Service_Translate(
-			$this->googleServicesCore->getClient()
-		);
-	}
+        $translatedText = $simpleTranslationObject->data['translations'][0]['translatedText'];
 
-	public function getTranslation($q, $target, $optParameters = [])
-	{
-		$translationObject = $this->service->translations->listTranslations($q, $target, $optParameters);
+        return $translatedText;
+    }
 
-		$simpleTranslationObject = $translationObject->toSimpleObject();
+    public function getLanguages($optParameters = [])
+    {
+        $languagesObject = $this->service->languages->listLanguages($optParameters);
 
-		$translatedText = $simpleTranslationObject->data['translations'][0]['translatedText'];
+        $simpleLanguagesObject = $languagesObject->toSimpleObject();
 
-		return $translatedText;
-	}
+        $languages = $simpleLanguagesObject->data['languages'];
 
-	public function getLanguages($optParameters = [])
-	{
-		$languagesObject = $this->service->languages->listLanguages($optParameters);
+        return $languages;
+    }
 
-		$simpleLanguagesObject = $languagesObject->toSimpleObject();
+    public function detectLanguage($q, $type = 'language', $optParameters = [])
+    {
+        $detectedLanguageObject = $this->service->detections->listDetections($q, $optParameters);
 
-		$languages = $simpleLanguagesObject->data['languages'];
+        $simpleDetectedLanguageObject = $detectedLanguageObject->toSimpleObject();
 
-		return $languages;
-	}
+        $language = $simpleDetectedLanguageObject->data['detections'][0][0]['language'];
 
-	public function detectLanguage($q, $type = 'language', $optParameters = [])
-	{
-		$detectedLanguageObject = $this->service->detections->listDetections($q, $optParameters);
-
-		$simpleDetectedLanguageObject = $detectedLanguageObject->toSimpleObject();
-
-		$language = $simpleDetectedLanguageObject->data['detections'][0][0]['language'];
-
-		return $language;
-	}
-
+        return $language;
+    }
 }
